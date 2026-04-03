@@ -1,0 +1,5 @@
+{
+  "name": "FaceMesh Virtual Identity",
+  "description": "A futuristic virtual identity experience using Google MediaPipe and Three.js to map your face in real-time.",
+  "requestFramePermissions": ["camera"]
+}
