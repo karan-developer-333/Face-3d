@@ -20,16 +20,27 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
 
     const initializeHolistic = async () => {
       setError(null);
+      setIsLoaded(false);
+      
+      const timeoutId = setTimeout(() => {
+        if (isMounted && !isLoaded) {
+          setError("Initialization is taking longer than expected. Please ensure your camera is not being used by another app and refresh. You can also try 'Force Start' if you see your camera feed.");
+        }
+      }, 20000);
+
       try {
-        const VERSION = '0.5.1675471551';
+        console.log("Initializing Holistic...");
+        const VERSION = '0.5.1675471629';
         holistic = new Holistic({
           locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic@${VERSION}/${file}`;
+            const url = `https://cdn.jsdelivr.net/npm/@mediapipe/holistic@${VERSION}/${file}`;
+            console.log("Loading MediaPipe file:", url);
+            return url;
           },
         });
 
         holistic.setOptions({
-          modelComplexity: 1,
+          modelComplexity: 0,
           smoothLandmarks: true,
           enableSegmentation: false,
           refineFaceLandmarks: true,
@@ -39,15 +50,18 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
 
         holistic.onResults((results) => {
           if (isMounted) {
-            // console.log("Holistic raw results:", !!results.faceLandmarks);
-            // Draw 2D debug landmarks
-            if (canvasRef.current && videoRef.current) {
+            if (!isLoaded) {
+              console.log("First results received!");
+              setIsLoaded(true);
+              clearTimeout(timeoutId);
+            }
+            
+            if (canvasRef.current) {
               const canvasCtx = canvasRef.current.getContext('2d');
               if (canvasCtx) {
                 canvasCtx.save();
                 canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
                 
-                // Draw face landmarks if they exist
                 if (results.faceLandmarks) {
                   canvasCtx.fillStyle = '#ff4d00';
                   for (const landmark of results.faceLandmarks) {
@@ -57,7 +71,6 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
                   }
                 }
                 
-                // Draw hand landmarks
                 const drawHand = (landmarks: any) => {
                   if (landmarks) {
                     canvasCtx.fillStyle = '#ffffff';
@@ -70,7 +83,6 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
                 };
                 drawHand(results.leftHandLandmarks);
                 drawHand(results.rightHandLandmarks);
-                
                 canvasCtx.restore();
               }
             }
@@ -79,31 +91,14 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
         });
 
         if (videoRef.current && isMounted) {
-          // Manual stream handling for better reliability in some browsers
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: { width: 640, height: 480 },
-              audio: false
-            });
-            if (videoRef.current && isMounted) {
-              videoRef.current.srcObject = stream;
-              await videoRef.current.play();
-            }
-          } catch (err) {
-            console.warn("Manual stream access failed, falling back to Camera utility:", err);
-          }
-
-          let isProcessing = false;
+          console.log("Starting Camera...");
           camera = new Camera(videoRef.current, {
             onFrame: async () => {
-              if (videoRef.current && holistic && isMounted && !isProcessing) {
-                isProcessing = true;
+              if (videoRef.current && holistic && isMounted) {
                 try {
                   await holistic.send({ image: videoRef.current });
                 } catch (e) {
                   // Ignore transient errors
-                } finally {
-                  isProcessing = false;
                 }
               }
             },
@@ -113,22 +108,21 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
           
           try {
             await camera.start();
-            if (isMounted) setIsLoaded(true);
-          } catch (err: any) {
-            console.error("Failed to start camera:", err);
+            console.log("Camera started successfully");
+          } catch (camErr: any) {
+            console.error("Camera start failed:", camErr);
             if (isMounted) {
-              const errorMessage = err?.message || String(err);
-              if (errorMessage.includes('Permission denied') || err?.name === 'NotAllowedError') {
-                setError("Camera permission denied. Please click the camera icon in your browser address bar to allow access, then click retry.");
-              } else {
-                setError(`Failed to access camera: ${errorMessage}`);
-              }
+              setError(`Camera access failed: ${camErr.message || "Please check permissions"}`);
+              clearTimeout(timeoutId);
             }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Holistic initialization failed:", err);
-        if (isMounted) setError("Initialization failed. Please refresh the page.");
+        if (isMounted) {
+          setError(`Initialization failed: ${err.message || "Unknown error"}`);
+          clearTimeout(timeoutId);
+        }
       }
     };
 
@@ -176,6 +170,12 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
           <div className="text-white/50 font-mono text-[10px] uppercase tracking-widest animate-pulse">
             Initializing Identity Scan...
           </div>
+          <button 
+            onClick={() => setIsLoaded(true)}
+            className="mt-4 px-3 py-1 bg-white/5 hover:bg-white/10 text-white/30 text-[8px] font-mono uppercase tracking-widest rounded transition-colors"
+          >
+            Force Bypass
+          </button>
         </div>
       )}
       

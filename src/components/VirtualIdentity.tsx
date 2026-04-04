@@ -30,11 +30,11 @@ const HAND_CONNECTIONS = [
 ];
 
 interface VirtualIdentityProps {
-  results: Results | null;
+  resultsRef: React.RefObject<Results | null>;
   smoothingFactor?: number;
 }
 
-export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoothingFactor = 0.2 }) => {
+export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ resultsRef, smoothingFactor = 0.1 }) => {
   const faceGroupRef = useRef<THREE.Group>(null);
   const leftHandGroupRef = useRef<THREE.Group>(null);
   const rightHandGroupRef = useRef<THREE.Group>(null);
@@ -66,6 +66,7 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
   const trackingTextRef = useRef<any>(null);
 
   useFrame(({ clock }) => {
+    const results = resultsRef.current;
     const faceLandmarks = results?.faceLandmarks;
     const leftHandLandmarks = results?.leftHandLandmarks;
     const rightHandLandmarks = results?.rightHandLandmarks;
@@ -91,9 +92,9 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
       if (meshPosAttr && pointsPosAttr) {
         for (let i = 0; i < landmarks.length; i++) {
           const landmark = landmarks[i];
-          const tx = (landmark.x - 0.5) * 10;
-          const ty = -(landmark.y - 0.5) * 10;
-          const tz = -landmark.z * 10;
+          const tx = (landmark.x - 0.5) * 12;
+          const ty = -(landmark.y - 0.5) * 12;
+          const tz = -landmark.z * 15;
 
           const cx = faceSmoothedPositions.current[i * 3];
           const cy = faceSmoothedPositions.current[i * 3 + 1];
@@ -127,9 +128,9 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
         if (pointsPosAttr && linesPosAttr) {
           for (let i = 0; i < landmarks.length; i++) {
             const landmark = landmarks[i];
-            const tx = (landmark.x - 0.5) * 10;
-            const ty = -(landmark.y - 0.5) * 10;
-            const tz = -landmark.z * 10;
+            const tx = (landmark.x - 0.5) * 12;
+            const ty = -(landmark.y - 0.5) * 12;
+            const tz = -landmark.z * 15;
 
             const cx = smoothedRef.current[i * 3];
             const cy = smoothedRef.current[i * 3 + 1];
@@ -161,7 +162,7 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
       trackingTextRef.current.visible = hasAny;
       if (hasFace && faceLandmarks) {
         const nose = faceLandmarks[1];
-        trackingTextRef.current.position.set((nose.x - 0.5) * 10, -(nose.y - 0.5) * 10 + 1.5, -nose.z * 10);
+        trackingTextRef.current.position.set((nose.x - 0.5) * 12, -(nose.y - 0.5) * 12 + 1.5, -nose.z * 15);
         trackingTextRef.current.text = `IDENTITY_LOCKED: ${results?.faceLandmarks?.length} NODES`;
       }
     }

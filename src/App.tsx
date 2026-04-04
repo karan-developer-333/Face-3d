@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { motion } from 'motion/react';
@@ -20,36 +20,42 @@ import { VirtualIdentity } from './components/VirtualIdentity';
 const ACCENT_COLOR = '#ff4d00';
 
 export default function App() {
-  const [faceResults, setFaceResults] = useState<Results | null>(null);
+  const resultsRef = useRef<Results | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
   const [activeTab, setActiveTab] = useState('identity');
-  const [smoothing, setSmoothing] = useState(0.2);
-
-  const isTracking = !!(faceResults && (faceResults.faceLandmarks || faceResults.leftHandLandmarks || faceResults.rightHandLandmarks));
+  const [smoothing, setSmoothing] = useState(0.1);
 
   const handleFaceResults = useCallback((results: Results) => {
-    // Force a new object reference and ensure landmarks are captured
-    setFaceResults({
-      faceLandmarks: results.faceLandmarks ? [...results.faceLandmarks] : undefined,
-      leftHandLandmarks: results.leftHandLandmarks ? [...results.leftHandLandmarks] : undefined,
-      rightHandLandmarks: results.rightHandLandmarks ? [...results.rightHandLandmarks] : undefined,
-      poseLandmarks: results.poseLandmarks ? [...results.poseLandmarks] : undefined,
-    } as Results);
-  }, []);
+    resultsRef.current = results;
+    const tracking = !!(results.faceLandmarks || results.leftHandLandmarks || results.rightHandLandmarks);
+    if (tracking !== isTracking) setIsTracking(tracking);
+  }, [isTracking]);
 
   return (
     <div className="fixed inset-0 bg-[#050505] overflow-hidden">
       {/* Full Screen 3D Viewport */}
-      <div className="absolute inset-0 z-0">
-        <Canvas className="w-full h-full" shadows>
+      <div className="absolute inset-0 z-0 bg-[#050505]">
+        <Canvas 
+          className="w-full h-full" 
+          shadows 
+          gl={{ antialias: true, alpha: true }}
+          style={{ pointerEvents: 'auto' }}
+        >
           <color attach="background" args={['#050505']} />
-          <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={50} />
-          <OrbitControls enableZoom={true} enablePan={true} />
+          <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
+          <OrbitControls enableZoom={true} enablePan={true} makeDefault />
           
-          <ambientLight intensity={1} />
-          <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} castShadow />
+          <ambientLight intensity={1.5} />
+          <pointLight position={[10, 10, 10]} intensity={2} />
           <pointLight position={[-10, -10, -10]} intensity={1} color={ACCENT_COLOR} />
           
-          <VirtualIdentity results={faceResults} smoothingFactor={smoothing} />
+          <VirtualIdentity resultsRef={resultsRef} smoothingFactor={smoothing} />
+
+          {/* Test Mesh to confirm Canvas is working */}
+          <mesh position={[0, -3, 0]} rotation={[0, Math.PI / 4, 0]}>
+            <boxGeometry args={[0.5, 0.5, 0.5]} />
+            <meshStandardMaterial color={ACCENT_COLOR} emissive={ACCENT_COLOR} emissiveIntensity={1} />
+          </mesh>
 
           {/* Grid Background */}
           <gridHelper args={[100, 100, 0x444444, 0x222222]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -10]} />
