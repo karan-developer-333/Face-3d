@@ -32,13 +32,24 @@ const HAND_CONNECTIONS = [
 interface VirtualIdentityProps {
   resultsRef: React.RefObject<Results | null>;
   smoothingFactor?: number;
+  videoElement?: HTMLVideoElement | null;
 }
 
-export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ resultsRef, smoothingFactor = 0.1 }) => {
+export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ resultsRef, smoothingFactor = 0.1, videoElement }) => {
   const faceGroupRef = useRef<THREE.Group>(null);
   const leftHandGroupRef = useRef<THREE.Group>(null);
   const rightHandGroupRef = useRef<THREE.Group>(null);
   const debugCubeRef = useRef<THREE.Mesh>(null);
+  const videoMeshRef = useRef<THREE.Mesh>(null);
+
+  const videoTexture = useMemo(() => {
+    if (!videoElement) return null;
+    const tex = new THREE.VideoTexture(videoElement);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.format = THREE.RGBAFormat;
+    return tex;
+  }, [videoElement]);
 
   const faceMeshGeometryRef = useRef<THREE.BufferGeometry>(null);
   const facePointsGeometryRef = useRef<THREE.BufferGeometry>(null);
@@ -79,6 +90,11 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ resultsRef, sm
     if (debugCubeRef.current) {
       debugCubeRef.current.visible = !hasAny;
       if (!hasAny) debugCubeRef.current.rotation.y += 0.01;
+    }
+
+    // Update video texture
+    if (videoTexture) {
+      videoTexture.needsUpdate = true;
     }
 
     // Update Face
@@ -187,6 +203,57 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ resultsRef, sm
         <boxGeometry args={[1.5, 1.5, 1.5]} />
         <meshStandardMaterial color="#ff4d00" wireframe />
       </mesh>
+
+      {/* Floating Video HUD */}
+      {videoTexture && (
+        <group position={[3.5, 2.2, 0]} rotation={[0, -Math.PI / 8, 0]}>
+          <mesh ref={videoMeshRef}>
+            <planeGeometry args={[3.2, 2.4]} />
+            <meshBasicMaterial 
+              map={videoTexture} 
+              transparent 
+              opacity={0.7} 
+              side={THREE.DoubleSide}
+            />
+            {/* HUD Border */}
+            <lineSegments>
+              <edgesGeometry attach="geometry" args={[new THREE.PlaneGeometry(3.2, 2.4)]} />
+              <lineBasicMaterial attach="material" color="#ff4d00" linewidth={2} />
+            </lineSegments>
+          </mesh>
+          
+          {/* Scanline Effect on HUD */}
+          <mesh position={[0, 0, 0.01]}>
+            <planeGeometry args={[3.2, 2.4]} />
+            <meshBasicMaterial 
+              color="#ff4d00" 
+              transparent 
+              opacity={0.05} 
+              wireframe
+            />
+          </mesh>
+
+          <Text
+            position={[0, 1.4, 0.1]}
+            fontSize={0.12}
+            color="#ff4d00"
+            font="https://fonts.gstatic.com/s/jetbrainsmono/v13/t63v_mS_vS0i_V-8e-G9vXvM.woff"
+            anchorX="center"
+          >
+            LIVE_FEED_DECRYPTED
+          </Text>
+          <Text
+            position={[0, -1.4, 0.1]}
+            fontSize={0.08}
+            color="#ffffff"
+            fillOpacity={0.4}
+            font="https://fonts.gstatic.com/s/jetbrainsmono/v13/t63v_mS_vS0i_V-8e-G9vXvM.woff"
+            anchorX="center"
+          >
+            SOURCE: BIOMETRIC_CAM_01
+          </Text>
+        </group>
+      )}
 
       {/* Face Group */}
       <group ref={faceGroupRef}>

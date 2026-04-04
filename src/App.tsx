@@ -21,7 +21,11 @@ const ACCENT_COLOR = '#ff4d00';
 
 export default function App() {
   const resultsRef = useRef<Results | null>(null);
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [activeTab, setActiveTab] = useState('identity');
   const [smoothing, setSmoothing] = useState(0.1);
 
@@ -30,6 +34,12 @@ export default function App() {
     const tracking = !!(results.faceLandmarks || results.leftHandLandmarks || results.rightHandLandmarks);
     if (tracking !== isTracking) setIsTracking(tracking);
   }, [isTracking]);
+
+  const handleRetry = () => {
+    setError(null);
+    setIsLoading(true);
+    setRetryCount(prev => prev + 1);
+  };
 
   return (
     <div className="fixed inset-0 bg-[#050505] overflow-hidden">
@@ -49,7 +59,11 @@ export default function App() {
           <pointLight position={[10, 10, 10]} intensity={2} />
           <pointLight position={[-10, -10, -10]} intensity={1} color={ACCENT_COLOR} />
           
-          <VirtualIdentity resultsRef={resultsRef} smoothingFactor={smoothing} />
+          <VirtualIdentity 
+            resultsRef={resultsRef} 
+            smoothingFactor={smoothing} 
+            videoElement={videoElement} 
+          />
 
           {/* Test Mesh to confirm Canvas is working */}
           <mesh position={[0, -3, 0]} rotation={[0, Math.PI / 4, 0]}>
@@ -81,20 +95,79 @@ export default function App() {
         </div>
       </div>
 
-      {/* Top Right Camera Preview */}
-      <div className="absolute top-6 right-6 z-20 w-64 group">
-        <div className="p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all group-hover:border-orange-500/30">
+      {/* Hidden Tracker (Still processing) */}
+      <div className="hidden">
+        <HolisticTracker 
+          onResults={handleFaceResults} 
+          onVideoReady={setVideoElement}
+          onLoading={setIsLoading}
+          onError={setError}
+          retryCount={retryCount}
+        />
+      </div>
+
+      {/* Loading / Error Overlay */}
+      {(isLoading || error) && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 backdrop-blur-xl">
+          {error ? (
+            <div className="flex flex-col items-center max-w-md p-10 border border-orange-500/40 bg-black/80 rounded-[2rem] text-center shadow-2xl shadow-orange-600/10">
+              <div className="w-20 h-20 bg-orange-600/20 rounded-full flex items-center justify-center mb-6 border border-orange-600/30">
+                <Lock className="w-10 h-10 text-orange-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3 uppercase tracking-tighter">Biometric Access Blocked</h2>
+              
+              <div className="bg-orange-600/10 border border-orange-600/20 rounded-xl p-4 mb-6 text-left">
+                <p className="text-orange-500 text-[10px] font-mono font-bold uppercase mb-2">System Log:</p>
+                <p className="text-white/70 text-xs font-mono leading-relaxed">
+                  {error.includes('Permission denied') 
+                    ? "CRITICAL: Camera access was explicitly denied by the user. Please click the camera icon in your browser's address bar and select 'Allow' to continue."
+                    : `ERROR_CODE: ${error}`}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                <button 
+                  onClick={handleRetry}
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-orange-600/20 active:scale-[0.98]"
+                >
+                  Retry Authorization
+                </button>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full py-3 bg-white/5 hover:bg-white/10 text-white/40 text-[10px] font-mono uppercase tracking-widest rounded-xl transition-all"
+                >
+                  Full System Reboot
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mb-6" />
+              <div className="text-white font-mono text-xs uppercase tracking-[0.3em] animate-pulse">
+                Decrypting Biometric Stream...
+              </div>
+              <button 
+                onClick={() => setIsLoading(false)}
+                className="mt-8 text-white/20 hover:text-white/40 text-[10px] font-mono uppercase tracking-widest transition-colors"
+              >
+                Bypass Calibration
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Top Right Controls (Camera Preview Removed) */}
+      <div className="absolute top-6 right-6 z-20 w-64 group pointer-events-none">
+        <div className="p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all group-hover:border-orange-500/30 pointer-events-auto">
           <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Live Feed</span>
+            <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">System Controls</span>
             <div className="flex gap-1">
               <div className="w-1 h-1 rounded-full bg-white/20" />
               <div className="w-1 h-1 rounded-full bg-white/20" />
             </div>
           </div>
-          <div className="aspect-video rounded-lg overflow-hidden bg-black border border-white/5">
-            <HolisticTracker onResults={handleFaceResults} />
-          </div>
-          <div className="mt-3 space-y-2">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-bold text-white/20 uppercase">Smoothing</span>
               <span className="text-[8px] font-mono text-orange-500">{(smoothing * 100).toFixed(0)}%</span>
@@ -106,7 +179,7 @@ export default function App() {
               step="0.01" 
               value={smoothing}
               onChange={(e) => setSmoothing(parseFloat(e.target.value))}
-              className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-orange-600 pointer-events-auto"
+              className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-orange-600"
             />
           </div>
         </div>
