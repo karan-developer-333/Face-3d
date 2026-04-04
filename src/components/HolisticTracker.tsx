@@ -29,10 +29,10 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({ onResults }) =
         });
 
         holistic.setOptions({
-          modelComplexity: 0,
+          modelComplexity: 1,
           smoothLandmarks: true,
           enableSegmentation: false,
-          refineFaceLandmarks: false,
+          refineFaceLandmarks: true,
           minDetectionConfidence: 0.5,
           minTrackingConfidence: 0.5,
         });

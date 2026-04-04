@@ -27,8 +27,13 @@ export default function App() {
   const isTracking = !!(faceResults && (faceResults.faceLandmarks || faceResults.leftHandLandmarks || faceResults.rightHandLandmarks));
 
   const handleFaceResults = useCallback((results: Results) => {
-    console.log("Results received:", !!results.faceLandmarks, !!results.leftHandLandmarks, !!results.rightHandLandmarks);
-    setFaceResults(results);
+    // Force a new object reference and ensure landmarks are captured
+    setFaceResults({
+      faceLandmarks: results.faceLandmarks ? [...results.faceLandmarks] : undefined,
+      leftHandLandmarks: results.leftHandLandmarks ? [...results.leftHandLandmarks] : undefined,
+      rightHandLandmarks: results.rightHandLandmarks ? [...results.rightHandLandmarks] : undefined,
+      poseLandmarks: results.poseLandmarks ? [...results.poseLandmarks] : undefined,
+    } as Results);
   }, []);
 
   return (
@@ -47,7 +52,8 @@ export default function App() {
           <VirtualIdentity results={faceResults} smoothingFactor={smoothing} />
 
           {/* Grid Background */}
-          <gridHelper args={[100, 100, 0x222222, 0x111111]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -10]} />
+          <gridHelper args={[100, 100, 0x444444, 0x222222]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -10]} />
+          <gridHelper args={[100, 100, 0x444444, 0x222222]} rotation={[0, 0, 0]} position={[0, -5, 0]} />
         </Canvas>
       </div>
 

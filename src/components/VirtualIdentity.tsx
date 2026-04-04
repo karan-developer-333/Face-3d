@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Results } from '@mediapipe/holistic';
+import { Text } from '@react-three/drei';
 
 // Standard triangulation indices for MediaPipe FaceMesh (Partial set for performance and visual style)
 const FACE_TRIANGULATION = [
@@ -62,8 +63,9 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
 
   const leftHandSmoothedPositions = useRef<Float32Array>(new Float32Array(21 * 3));
   const rightHandSmoothedPositions = useRef<Float32Array>(new Float32Array(21 * 3));
+  const trackingTextRef = useRef<any>(null);
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const faceLandmarks = results?.faceLandmarks;
     const leftHandLandmarks = results?.leftHandLandmarks;
     const rightHandLandmarks = results?.rightHandLandmarks;
@@ -153,10 +155,32 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
 
     updateHand(results?.leftHandLandmarks, leftHandGroupRef, leftHandPointsGeometryRef, leftHandLinesGeometryRef, leftHandSmoothedPositions);
     updateHand(results?.rightHandLandmarks, rightHandGroupRef, rightHandPointsGeometryRef, rightHandLinesGeometryRef, rightHandSmoothedPositions);
+
+    // Update tracking text
+    if (trackingTextRef.current) {
+      trackingTextRef.current.visible = hasAny;
+      if (hasFace && faceLandmarks) {
+        const nose = faceLandmarks[1];
+        trackingTextRef.current.position.set((nose.x - 0.5) * 10, -(nose.y - 0.5) * 10 + 1.5, -nose.z * 10);
+        trackingTextRef.current.text = `IDENTITY_LOCKED: ${results?.faceLandmarks?.length} NODES`;
+      }
+    }
   });
 
   return (
     <group>
+      {/* Tracking Status Text */}
+      <Text
+        ref={trackingTextRef}
+        fontSize={0.2}
+        color="#ff4d00"
+        font="https://fonts.gstatic.com/s/jetbrainsmono/v13/t63v_mS_vS0i_V-8e-G9vXvM.woff"
+        anchorX="center"
+        anchorY="middle"
+      >
+        IDENTITY_LOCKED
+      </Text>
+
       {/* Debug Cube */}
       <mesh ref={debugCubeRef}>
         <boxGeometry args={[1.5, 1.5, 1.5]} />
@@ -165,6 +189,7 @@ export const VirtualIdentity: React.FC<VirtualIdentityProps> = ({ results, smoot
 
       {/* Face Group */}
       <group ref={faceGroupRef}>
+        <pointLight position={[0, 0, 1]} intensity={2} color="#ff4d00" distance={5} />
         <mesh frustumCulled={false}>
           <bufferGeometry ref={faceMeshGeometryRef}>
             <bufferAttribute attach="attributes-position" count={facePositions.length / 3} array={facePositions} itemSize={3} />
