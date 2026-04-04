@@ -105,7 +105,8 @@ export const HolisticTracker: React.FC<HolisticTrackerProps> = ({
   return (
     <video
       ref={videoRef}
-      className="hidden"
+      className="absolute opacity-0 pointer-events-none"
+      style={{ width: 1, height: 1 }}
       playsInline
       muted
     />

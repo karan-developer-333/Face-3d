@@ -116,13 +116,22 @@ export default function App() {
               </div>
               <h2 className="text-2xl font-bold text-white mb-3 uppercase tracking-tighter">Biometric Access Blocked</h2>
               
-              <div className="bg-orange-600/10 border border-orange-600/20 rounded-xl p-4 mb-6 text-left">
-                <p className="text-orange-500 text-[10px] font-mono font-bold uppercase mb-2">System Log:</p>
-                <p className="text-white/70 text-xs font-mono leading-relaxed">
-                  {error.includes('Permission denied') 
-                    ? "CRITICAL: Camera access was explicitly denied by the user. Please click the camera icon in your browser's address bar and select 'Allow' to continue."
-                    : `ERROR_CODE: ${error}`}
+              <div className="bg-orange-600/10 border border-orange-600/20 rounded-xl p-5 mb-6 text-left">
+                <p className="text-orange-500 text-[10px] font-mono font-bold uppercase mb-3 flex items-center gap-2">
+                  <Activity className="w-3 h-3" />
+                  System Log: CAMERA_PERMISSION_DENIED
                 </p>
+                <div className="space-y-3">
+                  <p className="text-white/80 text-xs font-mono leading-relaxed">
+                    Access to the biometric sensor (camera) was explicitly blocked. To continue with identity decryption:
+                  </p>
+                  <ol className="text-white/60 text-[10px] font-mono space-y-2 list-decimal list-inside">
+                    <li>Look at your browser's address bar (top left/right).</li>
+                    <li>Click the <span className="text-orange-500 font-bold underline">Camera/Lock icon</span>.</li>
+                    <li>Change the setting to <span className="text-orange-500 font-bold">"Allow"</span>.</li>
+                    <li>Click the <span className="text-white font-bold">"Retry Authorization"</span> button below.</li>
+                  </ol>
+                </div>
               </div>
 
               <div className="flex flex-col gap-3 w-full">
